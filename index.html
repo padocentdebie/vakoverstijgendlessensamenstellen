@@ -199,33 +199,100 @@
             align-items: center;
         }
 
-        /* Student Login Modal */
-        .modal-overlay {
-            display: none;
+        /* Login Overlay */
+        #loginOverlay {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            display: flex;
             justify-content: center;
             align-items: center;
         }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
+        .login-card {
             background: white;
             padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            max-width: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
             width: 90%;
-            text-align: center;
         }
-        .modal-box h2 { margin-bottom: 20px; }
-        .modal-box select { margin: 15px 0; }
-        .modal-box .btn { margin-top: 10px; }
+        .login-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .login-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: #f1f5f9;
+            border: none;
+            font-weight: bold;
+            color: #64748b;
+            transition: 0.2s;
+        }
+        .login-tab.active {
+            background: #003082;
+            color: white;
+        }
+        .login-form {
+            padding: 20px 0;
+        }
+        .login-form.hidden { display: none; }
+        .login-form label { display: block; margin: 10px 0 5px; }
+        .login-form input, .login-form select {
+            margin-top: 5px;
+        }
+        .login-form .btn {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .login-error {
+            color: #dc2626;
+            font-size: 0.9em;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
     </style>
 </head>
 <body>
+
+<!-- Login Overlay -->
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2 style="text-align:center; margin-bottom: 20px;">🔐 Inloggen</h2>
+        <div class="login-tabs">
+            <button class="login-tab active" id="tabDocent" onclick="switchLoginTab('docent')">👨‍🏫 Docent</button>
+            <button class="login-tab" id="tabStudent" onclick="switchLoginTab('student')">👮 Student</button>
+        </div>
+        
+        <!-- Docent Login Form -->
+        <div class="login-form" id="docentLoginForm">
+            <label for="docentPassword"><b>Wachtwoord:</b></label>
+            <input type="password" id="docentPassword" placeholder="Vul wachtwoord in">
+            <button class="btn btn-primary" onclick="loginDocent()">Inloggen als Docent</button>
+            <div class="login-error" id="docentError"></div>
+        </div>
+
+        <!-- Student Login Form -->
+        <div class="login-form hidden" id="studentLoginForm">
+            <label for="studentName"><b>Voornaam:</b></label>
+            <input type="text" id="studentName" placeholder="Jouw voornaam">
+            
+            <label for="studentClass"><b>Klas:</b></label>
+            <select id="studentClass">
+                <!-- Vul via JS -->
+            </select>
+            
+            <button class="btn btn-success" onclick="loginStudent()">Inloggen als Student</button>
+            <div class="login-error" id="studentError"></div>
+        </div>
+    </div>
+</div>
 
 <div class="container">
     <h1>🏛️ Vakoverstijgend Lessensysteem</h1>
@@ -234,7 +301,7 @@
     <div class="nav">
         <div class="login-controls">
             <button class="btn btn-primary" onclick="switchRole('docent')">👨‍🏫 Docent Modus</button>
-            <button class="btn btn-secondary" onclick="openStudentLogin()">👮 Student Modus</button>
+            <button class="btn btn-secondary" onclick="switchRole('student')">👮 Student Modus</button>
             
             <div id="classSelectContainer" style="display:none; align-items:center; gap:8px; margin-left:15px;">
                 <label><b>Kies Klas:</b></label>
@@ -272,6 +339,7 @@
                         <h4>➕ Voeg Element Toe aan Les</h4>
                         <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                             <select id="elementTypeSelect" style="width: auto; flex-grow: 1;">
+                                <option value="tekst">📝 Tekst (Doelen/Activiteiten)</option>
                                 <option value="word_pdf">📄 Word / PDF Document (Upload & Embed)</option>
                                 <option value="powerpoint">📊 PowerPoint Presentatie (Upload & Embed)</option>
                                 <option value="digibord">🖥️ Live Digibord</option>
@@ -307,17 +375,6 @@
     </div>
 </div>
 
-<!-- Student Login Modal -->
-<div id="studentLoginModal" class="modal-overlay">
-    <div class="modal-box">
-        <h2>👮 Student Inloggen</h2>
-        <p>Selecteer jouw klas om toegang te krijgen tot de les.</p>
-        <select id="modalStudentClassSelect"></select>
-        <br>
-        <button class="btn btn-primary" onclick="confirmStudentLogin()">Start</button>
-    </div>
-</div>
-
 <!-- Firebase SDKs -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -337,7 +394,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Klassenlijst (INDIE bestaat NIET)
+    // Klassenlijst (ALPHA t/m MIKE, zonder INDIE)
     const CLASSES = ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL", "JULIETT", "KILO", "LIMA", "MIKE 9"];
 
     // 21 Kwaliteitscheck 3F Punten
@@ -365,17 +422,17 @@
         "21. Spelt werkwoorden op de juiste manier."
     ];
 
-    let currentRole = 'docent';
+    let currentRole = null;
+    let isAuthenticated = false;
     let currentStudentClass = CLASSES[0];
+    let currentStudentName = '';
     let lessons = {};
     let activeLessonId = null;
 
     // Helper: YouTube embed URL genereren
     function getYouTubeEmbedUrl(url) {
         if (!url) return '';
-        // Verwijder eventuele spaties
         url = url.trim();
-        // Patronen herkennen
         const patterns = [
             /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
             /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
@@ -384,80 +441,113 @@
         ];
         for (let pattern of patterns) {
             const match = url.match(pattern);
-            if (match) {
-                return `https://www.youtube.com/embed/${match[1]}`;
-            }
+            if (match) return `https://www.youtube.com/embed/${match[1]}`;
         }
-        // Fallback: als het al een embed-link is, geef die terug
         return url;
     }
 
-    // Open student login modal
-    window.openStudentLogin = () => {
-        // Vul de klas-select in de modal
-        const modalSelect = document.getElementById('modalStudentClassSelect');
-        modalSelect.innerHTML = '';
-        CLASSES.forEach(c => {
-            modalSelect.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-        document.getElementById('studentLoginModal').classList.add('active');
+    // Login tabblad wisselen
+    window.switchLoginTab = (role) => {
+        document.getElementById('tabDocent').classList.toggle('active', role === 'docent');
+        document.getElementById('tabStudent').classList.toggle('active', role === 'student');
+        document.getElementById('docentLoginForm').classList.toggle('hidden', role !== 'docent');
+        document.getElementById('studentLoginForm').classList.toggle('hidden', role !== 'student');
     };
 
-    // Bevestig login
-    window.confirmStudentLogin = () => {
-        const selectedClass = document.getElementById('modalStudentClassSelect').value;
-        document.getElementById('studentLoginModal').classList.remove('active');
-        currentStudentClass = selectedClass;
-        // Update de dropdown in de navigatie (zodat zichtbaar is welke klas actief is)
+    // Docent inloggen
+    window.loginDocent = () => {
+        const pass = document.getElementById('docentPassword').value;
+        if (pass === 'docent') {
+            isAuthenticated = true;
+            currentRole = 'docent';
+            document.getElementById('loginOverlay').style.display = 'none';
+            switchRole('docent');
+        } else {
+            document.getElementById('docentError').innerText = 'Onjuist wachtwoord';
+            document.getElementById('docentError').style.display = 'block';
+        }
+    };
+
+    // Student inloggen
+    window.loginStudent = () => {
+        const name = document.getElementById('studentName').value.trim();
+        const klass = document.getElementById('studentClass').value;
+        if (name === '') {
+            document.getElementById('studentError').innerText = 'Vul je voornaam in';
+            document.getElementById('studentError').style.display = 'block';
+            return;
+        }
+        isAuthenticated = true;
+        currentRole = 'student';
+        currentStudentName = name;
+        currentStudentClass = klass;
+        document.getElementById('loginOverlay').style.display = 'none';
+        // Update dropdown in nav
         document.getElementById('studentClassSelect').value = currentStudentClass;
         switchRole('student');
     };
 
-    // Sluit modal als er buiten wordt geklikt
-    document.getElementById('studentLoginModal').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            e.currentTarget.classList.remove('active');
-        }
-    });
-
+    // Rol wisselen (vanuit nav of na login)
     window.switchRole = (role) => {
+        if (!isAuthenticated) {
+            // Toon login overlay als nog niet ingelogd
+            document.getElementById('loginOverlay').style.display = 'flex';
+            if (role === 'student') switchLoginTab('student');
+            else switchLoginTab('docent');
+            return;
+        }
         currentRole = role;
         document.getElementById('docentDashboard').style.display = role === 'docent' ? 'block' : 'none';
         document.getElementById('studentDashboard').style.display = role === 'student' ? 'block' : 'none';
         document.getElementById('classSelectContainer').style.display = role === 'student' ? 'flex' : 'none';
         
-        document.getElementById('userInfo').innerHTML = `
-            <span class="role-badge ${role === 'docent' ? 'role-docent' : 'role-student'}">
-                ${role === 'docent' ? '👨‍🏫 Docent' : '👮 Student (' + currentStudentClass + ')'}
-            </span>
-        `;
+        let badgeText = '';
+        if (role === 'docent') {
+            badgeText = `<span class="role-badge role-docent">👨‍🏫 Docent</span>`;
+        } else {
+            badgeText = `<span class="role-badge role-student">👮 ${currentStudentName} (${currentStudentClass})</span>`;
+        }
+        document.getElementById('userInfo').innerHTML = badgeText;
+
         if (role === 'student') listenToPushedLesson();
+        else renderLessonList(); // Docent dashboard altijd up-to-date
     };
 
+    // Klas wijzigen (student)
     window.changeStudentClass = () => {
         currentStudentClass = document.getElementById('studentClassSelect').value;
-        switchRole('student');
+        if (currentRole === 'student') listenToPushedLesson();
     };
 
-    // Firebase Sync
-    onValue(ref(db, 'lessons'), (snapshot) => {
-        lessons = snapshot.val() || {};
-        renderLessonList();
-        if (activeLessonId && lessons[activeLessonId]) {
-            renderActiveLesson();
-        }
-    });
-
+    // Initialisatie van dropdowns
     function initClassDropdowns() {
+        // Student login klas dropdown
+        const loginClassSelect = document.getElementById('studentClass');
+        loginClassSelect.innerHTML = '';
+        CLASSES.forEach(c => {
+            loginClassSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+
+        // Nav klas dropdown (voor student dashboard)
         const studentSel = document.getElementById('studentClassSelect');
         const pushSel = document.getElementById('pushClassSelect');
         studentSel.innerHTML = ''; pushSel.innerHTML = '';
-
         CLASSES.forEach(c => {
             studentSel.innerHTML += `<option value="${c}">${c}</option>`;
             pushSel.innerHTML += `<option value="${c}">${c}</option>`;
         });
     }
+
+    // Firebase Sync
+    onValue(ref(db, 'lessons'), (snapshot) => {
+        lessons = snapshot.val() || {};
+        if (currentRole === 'docent') {
+            renderLessonList();
+            if (activeLessonId && lessons[activeLessonId]) {
+                renderActiveLesson();
+            }
+        }
+    });
 
     // Les Beheer
     window.createLesson = () => {
@@ -575,6 +665,7 @@
 
     function getElementTitle(type) {
         const map = {
+            tekst: '📝 Tekst (Doelen/Activiteiten)',
             word_pdf: '📄 Word / PDF Document',
             powerpoint: '📊 PowerPoint Presentatie',
             digibord: '🖥️ Interactief Digibord',
@@ -588,7 +679,7 @@
         return map[type] || 'Element';
     }
 
-    // Element Render Functie (Uploaden EN Embedden)
+    // Element Render Functie
     function renderElement(elem, index, isDocent) {
         const box = document.createElement('div');
         box.className = 'element-box';
@@ -611,6 +702,12 @@
         const body = document.createElement('div');
 
         switch (elem.type) {
+            case 'tekst':
+                body.innerHTML = `
+                    ${isDocent ? `<textarea rows="4" placeholder="Voer doelen of activiteiten in..." onblur="updateElemContent('${elem.id}', this.value)">${elem.content || ''}</textarea>` : `<p>${elem.content || ''}</p>`}
+                `;
+                break;
+
             case 'word_pdf':
                 body.innerHTML = `
                     ${isDocent ? `<p><b>Upload een Word of PDF document om in te bedden:</b></p>
@@ -808,7 +905,6 @@
             </table>
         `;
 
-        // Realtime Luisteren naar 3F data uit Firebase
         onValue(checkRef, (snap) => {
             const data = snap.val() || {};
             const tbody = document.getElementById(`tbody_3f_${elemId}`);
@@ -936,7 +1032,9 @@
 
     // Initialisatie
     initClassDropdowns();
-    switchRole('docent');
+    // Toon login overlay bij start
+    document.getElementById('loginOverlay').style.display = 'flex';
+    switchLoginTab('docent'); // standaard tabblad
 </script>
 
 </body>
