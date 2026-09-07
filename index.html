@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vakoverstijgend Lessensysteem - Embed & 3F Feedback</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #003082 0%, #1e40af 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #003082;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            border-bottom: 3px solid #003082;
+            padding-bottom: 10px;
+        }
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 15px 20px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+        }
+        .login-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .role-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9em;
+        }
+        .role-docent { background: #16a34a; }
+        .role-student { background: #2563eb; }
+        
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95em;
+        }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-primary { background: #003082; color: white; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-warning { background: #d97706; color: white; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 0.85em; }
+
+        .dashboard { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
+
+        .sidebar { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .main-content { background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+
+        .lesson-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            transition: 0.2s;
+        }
+        .lesson-card.active { border-color: #003082; background: #eff6ff; }
+        .lesson-header { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Element Styling */
+        .element-box {
+            position: relative;
+            background: #f8fafc;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .element-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .btn-close-elem {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        /* Embed Window Containers */
+        .embed-window {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #ffffff;
+            margin-top: 10px;
+        }
+
+        /* Digibord Styling */
+        .digibord-container {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            background: #ffffff;
+            border: 2px solid #003082;
+            border-radius: 10px;
+            touch-action: none;
+            overflow: hidden;
+        }
+        canvas.whiteboard { width: 100%; height: 100%; cursor: crosshair; display: block; }
+        .digibord-tools {
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #cbd5e1;
+            flex-wrap: wrap;
+        }
+
+        /* Livefeed & Tafels */
+        .live-feed {
+            max-height: 250px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .feed-item {
+            padding: 8px 12px;
+            background: #f1f5f9;
+            border-left: 4px solid #003082;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        
+        /* 3F Matrix Form met Student Feedback */
+        .table-3f { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .table-3f th, .table-3f td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 0.88em; }
+        .table-3f th { background: #003082; color: white; text-align: left; }
+        .table-3f tr:nth-child(even) { background: #f8fafc; }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin-top: 4px;
+            font-family: inherit;
+        }
+
+        .push-bar {
+            display: flex;
+            gap: 10px;
+            background: #e0e7ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏛️ Vakoverstijgend Lessensysteem</h1>
+
+    <!-- Navigatie & Inloggen -->
+    <div class="nav">
+        <div class="login-controls">
+            <button class="btn btn-primary" onclick="switchRole('docent')">👨‍🏫 Docent Modus</button>
+            <button class="btn btn-secondary" onclick="switchRole('student')">👮 Student Modus</button>
+            
+            <div id="classSelectContainer" style="display:none; align-items:center; gap:8px; margin-left:15px;">
+                <label><b>Kies Klas:</b></label>
+                <select id="studentClassSelect" style="width: auto;" onchange="changeStudentClass()">
+                    <!-- Klassen via JS -->
+                </select>
+            </div>
+        </div>
+        <div id="userInfo"></div>
+    </div>
+
+    <!-- Docent Dashboard -->
+    <div id="docentDashboard" style="display: none;">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>📚 Lessen Beheren</h3>
+                <button class="btn btn-success" style="width: 100%; margin: 15px 0;" onclick="createLesson()">➕ Nieuwe Les</button>
+                <div id="lessonList"></div>
+            </div>
+
+            <div class="main-content">
+                <div id="activeLessonArea" style="display:none;">
+                    <div class="push-bar">
+                        <label><b>🚀 Les Pushen naar Klas:</b></label>
+                        <select id="pushClassSelect" style="width: auto; flex-grow: 1;"></select>
+                        <button class="btn btn-warning" onclick="pushActiveLesson()">Pushen Naar Klas</button>
+                    </div>
+
+                    <h2 id="activeLessonTitle" style="margin-bottom: 15px;"></h2>
+                    
+                    <div id="elementsContainer"></div>
+
+                    <!-- Element Toevoegen Menu -->
+                    <div style="background: #f1f5f9; padding: 15px; border-radius: 10px; margin-top: 20px;">
+                        <h4>➕ Voeg Element Toe aan Les</h4>
+                        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                            <select id="elementTypeSelect" style="width: auto; flex-grow: 1;">
+                                <option value="word_pdf">📄 Word / PDF Document (Upload & Embed)</option>
+                                <option value="powerpoint">📊 PowerPoint Presentatie (Upload & Embed)</option>
+                                <option value="digibord">🖥️ Live Digibord</option>
+                                <option value="pv_bevindingen">✍️ PV Bevindingen (Livefeed)</option>
+                                <option value="pv_check_3f">📋 Kwaliteitscheck 3F (Met Student Opmerkingen)</option>
+                                <option value="stelling">💬 Stelling / Invoer Reacties</option>
+                                <option value="iframe">🌐 Website (iFrame)</option>
+                                <option value="youtube">🎥 YouTube Video</option>
+                                <option value="media">🎵 Audio / Video Upload & Player</option>
+                            </select>
+                            <button class="btn btn-success" onclick="addElementToActiveLesson()">Element Toevoegen</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="noLessonSelected" style="text-align: center; color: #64748b; padding: 50px;">
+                    Selecteer een les uit de linker kolom of maak een nieuwe les aan om te beginnen.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Dashboard -->
+    <div id="studentDashboard" style="display: none;">
+        <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1;">
+            <h2 id="studentLessonHeader">👮 Welkom bij de Les</h2>
+            <p id="studentClassBadge" style="color: #64748b; margin-bottom: 20px;"></p>
+            <div id="studentLessonElements">
+                <div style="text-align: center; padding: 40px; color: #64748b;">
+                    ⏳ Wachten tot de docent een les pusht naar klas <span id="waitingClassName"></span>...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, push, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Firebase Configuratie
+    const firebaseConfig = {
+        apiKey: "AIzaSyBEod8zm1jvvkmPbe6cA_SQo2U_esC9yTY",
+        authDomain: "aangiftebotje.firebaseapp.com",
+        databaseURL: "https://aangiftebotje-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "aangiftebotje",
+        storageBucket: "aangiftebotje.firebasestorage.app",
+        messagingSenderId: "825633841222",
+        appId: "1:825633841222:web:15d93d08e2b719285dea47"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Klassenlijst (INDIE bestaat niet)
+    const CLASSES = ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL", "JULIETT", "KILO", "LIMA", "MIKE 9"];
+
+    // 21 Kwaliteitscheck 3F Punten
+    const CHECKLIST_3F = [
+        "1. Inleiding: beschrijft aanleiding tot schrijven van dit proces-verbaal.",
+        "2. Beschrijft het decor op de juiste wijze.",
+        "3. Kern: beschrijft relevante waarnemingen en handelingen.",
+        "4. Slot: beschrijft de afhandeling en overige relevante informatie.",
+        "5. Beschrijft zoveel mogelijk de 7 Gouden W's.",
+        "6. Gebruikt de redenen van wetenschap op de juiste manier.",
+        "7. Beschrijft goederen en personen op de juiste manier.",
+        "8. Schrijft feitelijk en eenduidig.",
+        "9. Schrijft relevante plaatsen, data en tijdstippen op de juiste manier.",
+        "10. Deelt de tekst van het proces-verbaal op in alinea's.",
+        "11. Schrijft de gebeurtenissen in chronologische volgorde.",
+        "12. Gebruikt juiste signaalwoorden en voegwoorden.",
+        "13. Gebruikt juiste verwijswoorden.",
+        "14. Past de schrijfstijl aan de lezer aan.",
+        "15. Consistent in het benoemen van betrokkenen en voorwerpen.",
+        "16. Gebruikt woorden en vaste zinsdelen op de juiste manier.",
+        "17. Gebruikt hoofdletters op de juiste manier.",
+        "18. Gebruikt leestekens op de juiste manier.",
+        "19. Schrijft zinnen die grammaticaal correct zijn.",
+        "20. Spelt woorden op de juiste manier.",
+        "21. Spelt werkwoorden op de juiste manier."
+    ];
+
+    let currentRole = 'docent';
+    let currentStudentClass = CLASSES[0];
+    let lessons = {};
+    let activeLessonId = null;
+
+    window.switchRole = (role) => {
+        currentRole = role;
+        document.getElementById('docentDashboard').style.display = role === 'docent' ? 'block' : 'none';
+        document.getElementById('studentDashboard').style.display = role === 'student' ? 'block' : 'none';
+        document.getElementById('classSelectContainer').style.display = role === 'student' ? 'flex' : 'none';
+        
+        document.getElementById('userInfo').innerHTML = `
+            <span class="role-badge ${role === 'docent' ? 'role-docent' : 'role-student'}">
+                ${role === 'docent' ? '👨‍🏫 Docent' : '👮 Student (' + currentStudentClass + ')'}
+            </span>
+        `;
+        if (role === 'student') listenToPushedLesson();
+    };
+
+    window.changeStudentClass = () => {
+        currentStudentClass = document.getElementById('studentClassSelect').value;
+        switchRole('student');
+    };
+
+    // Firebase Sync
+    onValue(ref(db, 'lessons'), (snapshot) => {
+        lessons = snapshot.val() || {};
+        renderLessonList();
+        if (activeLessonId && lessons[activeLessonId]) {
+            renderActiveLesson();
+        }
+    });
+
+    function initClassDropdowns() {
+        const studentSel = document.getElementById('studentClassSelect');
+        const pushSel = document.getElementById('pushClassSelect');
+        studentSel.innerHTML = ''; pushSel.innerHTML = '';
+
+        CLASSES.forEach(c => {
+            studentSel.innerHTML += `<option value="${c}">${c}</option>`;
+            pushSel.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+
+    // Les Beheer
+    window.createLesson = () => {
+        const name = prompt("Voer de naam van de nieuwe les in:");
+        if (!name) return;
+        const newRef = push(ref(db, 'lessons'));
+        set(newRef, { id: newRef.key, title: name, elements: [] });
+    };
+
+    window.selectLesson = (id) => {
+        activeLessonId = id;
+        renderLessonList();
+        renderActiveLesson();
+    };
+
+    window.deleteLesson = (id) => {
+        if (confirm("Weet je zeker dat je deze les wilt verwijderen?")) {
+            remove(ref(db, `lessons/${id}`));
+            if (activeLessonId === id) {
+                activeLessonId = null;
+                document.getElementById('activeLessonArea').style.display = 'none';
+                document.getElementById('noLessonSelected').style.display = 'block';
+            }
+        }
+    };
+
+    window.moveLesson = (id, direction) => {
+        const keys = Object.keys(lessons);
+        const index = keys.indexOf(id);
+        if (index < 0) return;
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < keys.length) {
+            const targetKey = keys[newIndex];
+            const temp = lessons[id];
+            lessons[id] = lessons[targetKey];
+            lessons[targetKey] = temp;
+            set(ref(db, 'lessons'), lessons);
+        }
+    };
+
+    function renderLessonList() {
+        const container = document.getElementById('lessonList');
+        container.innerHTML = '';
+        Object.values(lessons).forEach((lesson) => {
+            const isActive = lesson.id === activeLessonId;
+            container.innerHTML += `
+                <div class="lesson-card ${isActive ? 'active' : ''}">
+                    <div class="lesson-header">
+                        <strong>📖 ${lesson.title}</strong>
+                        <div>
+                            <button class="btn btn-secondary btn-sm" onclick="moveLesson('${lesson.id}', -1)">▲</button>
+                            <button class="btn btn-secondary btn-sm" onclick="moveLesson('${lesson.id}', 1)">▼</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteLesson('${lesson.id}')">✖</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" style="width:100%; margin-top:8px;" onclick="selectLesson('${lesson.id}')">Bewerken</button>
+                </div>
+            `;
+        });
+    }
+
+    function renderActiveLesson() {
+        const lesson = lessons[activeLessonId];
+        if (!lesson) return;
+        document.getElementById('noLessonSelected').style.display = 'none';
+        document.getElementById('activeLessonArea').style.display = 'block';
+        document.getElementById('activeLessonTitle').innerText = `Bewerken: ${lesson.title}`;
+
+        const container = document.getElementById('elementsContainer');
+        container.innerHTML = '';
+
+        const elements = lesson.elements || [];
+        elements.forEach((elem, index) => {
+            container.appendChild(renderElement(elem, index, true));
+        });
+    }
+
+    // Elementen toevoegen / verplaatsen
+    window.addElementToActiveLesson = () => {
+        if (!activeLessonId) return;
+        const type = document.getElementById('elementTypeSelect').value;
+        const lesson = lessons[activeLessonId];
+        const elements = lesson.elements || [];
+
+        const newElem = {
+            id: 'elem_' + Date.now(),
+            type: type,
+            title: getElementTitle(type),
+            content: '',
+            mimeType: ''
+        };
+
+        elements.push(newElem);
+        set(ref(db, `lessons/${activeLessonId}/elements`), elements);
+    };
+
+    window.removeElement = (index) => {
+        const lesson = lessons[activeLessonId];
+        let elements = lesson.elements || [];
+        elements.splice(index, 1);
+        set(ref(db, `lessons/${activeLessonId}/elements`), elements);
+    };
+
+    window.moveElement = (index, direction) => {
+        const lesson = lessons[activeLessonId];
+        let elements = lesson.elements || [];
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < elements.length) {
+            const temp = elements[index];
+            elements[index] = elements[newIndex];
+            elements[newIndex] = temp;
+            set(ref(db, `lessons/${activeLessonId}/elements`), elements);
+        }
+    };
+
+    function getElementTitle(type) {
+        const map = {
+            word_pdf: '📄 Word / PDF Document',
+            powerpoint: '📊 PowerPoint Presentatie',
+            digibord: '🖥️ Interactief Digibord',
+            pv_bevindingen: '✍️ PV Bevindingen Livefeed',
+            pv_check_3f: '📋 Kwaliteitscheck 3F (Inclusief Studentopmerkingen)',
+            stelling: '💬 Stelling & Live Reacties',
+            iframe: '🌐 Website Embed',
+            youtube: '🎥 YouTube Video',
+            media: '🎵 Audio / Video Speler'
+        };
+        return map[type] || 'Element';
+    }
+
+    // Element Render Functie (Uploaden EN Embedden)
+    function renderElement(elem, index, isDocent) {
+        const box = document.createElement('div');
+        box.className = 'element-box';
+
+        if (isDocent) {
+            box.innerHTML += `
+                <button class="btn-close-elem" title="Verwijder element" onclick="removeElement(${index})">✖</button>
+                <div class="element-header">
+                    <h3>${elem.title}</h3>
+                    <div>
+                        <button class="btn btn-secondary btn-sm" onclick="moveElement(${index}, -1)">▲ Omhoog</button>
+                        <button class="btn btn-secondary btn-sm" onclick="moveElement(${index}, 1)">▼ Omlaag</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            box.innerHTML += `<h3>${elem.title}</h3><br>`;
+        }
+
+        const body = document.createElement('div');
+
+        switch (elem.type) {
+            case 'word_pdf':
+                body.innerHTML = `
+                    ${isDocent ? `<p><b>Upload een Word of PDF document om in te bedden:</b></p>
+                    <input type="file" accept=".pdf,.doc,.docx" onchange="handleFileUpload(event, '${elem.id}')"><br><br>` : ''}
+                    <div id="file_preview_${elem.id}">
+                        ${elem.content ? `<iframe src="${elem.content}" class="embed-window"></iframe>` : '<p style="color:#888;">Nog geen document geüpload.</p>'}
+                    </div>
+                `;
+                break;
+
+            case 'powerpoint':
+                body.innerHTML = `
+                    ${isDocent ? `<p><b>Upload een PowerPoint of PDF-presentatie om in te bedden:</b></p>
+                    <input type="file" accept=".ppt,.pptx,.pdf" onchange="handleFileUpload(event, '${elem.id}')"><br><br>` : ''}
+                    <div id="file_preview_${elem.id}">
+                        ${elem.content ? `<object data="${elem.content}" class="embed-window" type="application/pdf"><iframe src="${elem.content}" class="embed-window"></iframe></object>` : '<p style="color:#888;">Nog geen presentatie geüpload.</p>'}
+                    </div>
+                `;
+                break;
+
+            case 'digibord':
+                body.appendChild(createDigibordComponent(elem.id));
+                break;
+
+            case 'pv_bevindingen':
+                body.innerHTML = `
+                    <p><b>Voer hier je bevindingen in voor het Proces-Verbaal:</b></p>
+                    <textarea id="input_pv_${elem.id}" rows="3" placeholder="Typ hier de feiten en bevindingen..."></textarea>
+                    <button class="btn btn-primary" style="margin-top:8px;" onclick="submitPV('${elem.id}')">Inleveren</button>
+                    <h4 style="margin-top:15px;">Livefeed Inzendingen:</h4>
+                    <div class="live-feed" id="feed_pv_${elem.id}"></div>
+                `;
+                listenToLiveFeed(`pv_bevindingen/${elem.id}`, `feed_pv_${elem.id}`);
+                break;
+
+            case 'pv_check_3f':
+                body.appendChild(create3FCheckComponent(elem.id, isDocent));
+                break;
+
+            case 'stelling':
+                body.innerHTML = `
+                    ${isDocent ? `<p><b>Stelling bewerken:</b></p><input type="text" value="${elem.content || ''}" onblur="updateElemContent('${elem.id}', this.value)" placeholder="Voer stelling in...">` : `<h3>${elem.content || 'Geen stelling opgegeven'}</h3>`}
+                    <div style="margin-top:10px;">
+                        <input type="text" id="input_stelling_${elem.id}" placeholder="Jouw reactie op de stelling...">
+                        <button class="btn btn-success" style="margin-top:5px;" onclick="submitStelling('${elem.id}')">Reageren</button>
+                    </div>
+                    <div class="live-feed" id="feed_stelling_${elem.id}"></div>
+                `;
+                listenToLiveFeed(`stellingen/${elem.id}`, `feed_stelling_${elem.id}`);
+                break;
+
+            case 'iframe':
+                body.innerHTML = `
+                    ${isDocent ? `<input type="text" value="${elem.content || ''}" placeholder="https://voorbeeld.nl" onblur="updateElemContent('${elem.id}', this.value)">` : ''}
+                    <iframe src="${elem.content || 'about:blank'}" class="embed-window"></iframe>
+                `;
+                break;
+
+            case 'youtube':
+                const embedUrl = elem.content ? elem.content.replace("watch?v=", "embed/") : '';
+                body.innerHTML = `
+                    ${isDocent ? `<input type="text" value="${elem.content || ''}" placeholder="https://www.youtube.com/watch?v=..." onblur="updateElemContent('${elem.id}', this.value)">` : ''}
+                    ${embedUrl ? `<iframe src="${embedUrl}" style="width:100%; height:450px; border:none; margin-top:10px;" allowfullscreen></iframe>` : ''}
+                `;
+                break;
+
+            case 'media':
+                const isVideo = elem.mimeType ? elem.mimeType.startsWith('video') : true;
+                body.innerHTML = `
+                    ${isDocent ? `<p><b>Upload een Audio- of Videobestand om af te spelen:</b></p>
+                    <input type="file" accept="audio/*,video/*" onchange="handleFileUpload(event, '${elem.id}')"><br><br>` : ''}
+                    <div id="file_preview_${elem.id}">
+                        ${elem.content ? (isVideo ? 
+                            `<video src="${elem.content}" controls style="width:100%; max-height:450px; border-radius:8px;"></video>` : 
+                            `<audio src="${elem.content}" controls style="width:100%; margin-top:10px;"></audio>`) : 
+                            '<p style="color:#888;">Nog geen media geüpload.</p>'}
+                    </div>
+                `;
+                break;
+        }
+
+        box.appendChild(body);
+        return box;
+    }
+
+    // Digibord Realtime Component
+    function createDigibordComponent(elemId) {
+        const container = document.createElement('div');
+        container.className = 'digibord-container';
+        
+        container.innerHTML = `
+            <div class="digibord-tools">
+                <button class="btn btn-secondary btn-sm" id="btn_draw_${elemId}">✏️ Tekenen</button>
+                <input type="text" id="text_input_${elemId}" placeholder="Woord toevoegen..." style="width:150px; padding:4px;">
+                <button class="btn btn-primary btn-sm" id="btn_text_${elemId}">Plaats Tekst</button>
+                <button class="btn btn-danger btn-sm" id="btn_clear_${elemId}">Wis Bord</button>
+            </div>
+            <canvas class="whiteboard" id="canvas_${elemId}" width="1000" height="400"></canvas>
+        `;
+
+        setTimeout(() => {
+            const canvas = document.getElementById(`canvas_${elemId}`);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            const boardRef = ref(db, `classes/${currentStudentClass}/digibord/${elemId}`);
+
+            onValue(boardRef, (snap) => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const data = snap.val() || {};
+                Object.values(data).forEach(obj => {
+                    if (obj.type === 'path' && obj.points) {
+                        ctx.strokeStyle = "#003082"; ctx.lineWidth = 3; ctx.beginPath();
+                        ctx.moveTo(obj.points[0].x, obj.points[0].y);
+                        obj.points.forEach(p => ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
+                    } else if (obj.type === 'text') {
+                        ctx.font = "bold 20px Arial"; ctx.fillStyle = "#333";
+                        ctx.fillText(obj.text, obj.x, obj.y);
+                    }
+                });
+            });
+
+            const getPos = (e) => {
+                const r = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: (clientX - r.left) * (canvas.width / r.width), y: (clientY - r.top) * (canvas.height / r.height) };
+            };
+
+            let currentPathRef = null;
+            let pathPoints = [];
+
+            const startDraw = (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                pathPoints = [pos];
+                currentPathRef = push(boardRef);
+                set(currentPathRef, { type: 'path', points: pathPoints });
+            };
+
+            const moveDraw = (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                pathPoints.push(pos);
+                update(currentPathRef, { points: pathPoints });
+            };
+
+            const stopDraw = () => { isDrawing = false; };
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', stopDraw);
+
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveDraw(e); });
+            window.addEventListener('touchend', stopDraw);
+
+            document.getElementById(`btn_text_${elemId}`).onclick = () => {
+                const val = document.getElementById(`text_input_${elemId}`).value.trim();
+                if (val) {
+                    push(boardRef, { type: 'text', text: val, x: 100, y: 100 });
+                    document.getElementById(`text_input_${elemId}`).value = '';
+                }
+            };
+
+            document.getElementById(`btn_clear_${elemId}`).onclick = () => {
+                if (confirm("Bord wissen?")) remove(boardRef);
+            };
+        }, 200);
+
+        return container;
+    }
+
+    // 3F Kwaliteitscheck Component MET Interactieve Student Opmerkingen
+    function create3FCheckComponent(elemId, isDocent) {
+        const wrap = document.createElement('div');
+        const checkRef = ref(db, `classes/${currentStudentClass}/pv_check_3f/${elemId}`);
+
+        wrap.innerHTML = `
+            <p><b>Interactieve 3F Kwaliteitscheck (Met docentbeoordeling & studentopmerkingen):</b></p>
+            <table class="table-3f">
+                <thead>
+                    <tr>
+                        <th style="width:30%;">Onderdeel</th>
+                        <th style="width:15%;">Docent Oordeel</th>
+                        <th style="width:27%;">Feedback Docent</th>
+                        <th style="width:28%;">Opmerking / Vraag Student</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody_3f_${elemId}">
+                    <!-- Wordt realtime gevuld uit Firebase -->
+                </tbody>
+            </table>
+        `;
+
+        // Realtime Luisteren naar 3F data uit Firebase
+        onValue(checkRef, (snap) => {
+            const data = snap.val() || {};
+            const tbody = document.getElementById(`tbody_3f_${elemId}`);
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            CHECKLIST_3F.forEach((item, i) => {
+                const itemData = data[i] || {};
+                const status = itemData.status || '⚪';
+                const docentFeedback = itemData.docentFeedback || '';
+                const studentRemark = itemData.studentRemark || '';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><b>${item}</b></td>
+                    <td>
+                        <select onchange="save3FCheck('${elemId}', ${i}, 'status', this.value)">
+                            <option value="⚪" ${status === '⚪' ? 'selected' : ''}>⚪ N.v.t.</option>
+                            <option value="✅ Goed" ${status === '✅ Goed' ? 'selected' : ''}>✅ Goed</option>
+                            <option value="⚠️ Kan beter" ${status === '⚠️ Kan beter' ? 'selected' : ''}>⚠️ Kan beter</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" value="${docentFeedback}" placeholder="Feedback docent..." onblur="save3FCheck('${elemId}', ${i}, 'docentFeedback', this.value)">
+                    </td>
+                    <td>
+                        <input type="text" value="${studentRemark}" placeholder="Vraag/Opmerking student..." onblur="save3FCheck('${elemId}', ${i}, 'studentRemark', this.value)">
+                    </td>
+                </tr>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        return wrap;
+    }
+
+    window.save3FCheck = (elemId, itemIndex, field, value) => {
+        const fieldRef = ref(db, `classes/${currentStudentClass}/pv_check_3f/${elemId}/${itemIndex}/${field}`);
+        set(fieldRef, value);
+    };
+
+    // Helper functies voor upload en livefeeds
+    window.handleFileUpload = (e, elemId) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const lesson = lessons[activeLessonId];
+            const elem = lesson.elements.find(el => el.id === elemId);
+            if (elem) {
+                elem.content = event.target.result;
+                elem.mimeType = file.type;
+                set(ref(db, `lessons/${activeLessonId}/elements`), lesson.elements);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.updateElemContent = (elemId, val) => {
+        const lesson = lessons[activeLessonId];
+        const elem = lesson.elements.find(e => e.id === elemId);
+        if (elem) {
+            elem.content = val;
+            set(ref(db, `lessons/${activeLessonId}/elements`), lesson.elements);
+        }
+    };
+
+    window.submitPV = (elemId) => {
+        const val = document.getElementById(`input_pv_${elemId}`).value.trim();
+        if (val) {
+            push(ref(db, `livefeeds/pv_bevindingen/${elemId}`), { text: val, timestamp: Date.now() });
+            document.getElementById(`input_pv_${elemId}`).value = '';
+        }
+    };
+
+    window.submitStelling = (elemId) => {
+        const val = document.getElementById(`input_stelling_${elemId}`).value.trim();
+        if (val) {
+            push(ref(db, `livefeeds/stellingen/${elemId}`), { text: val, timestamp: Date.now() });
+            document.getElementById(`input_stelling_${elemId}`).value = '';
+        }
+    };
+
+    function listenToLiveFeed(path, elementContainerId) {
+        onValue(ref(db, `livefeeds/${path}`), (snap) => {
+            const feedContainer = document.getElementById(elementContainerId);
+            if (!feedContainer) return;
+            feedContainer.innerHTML = '';
+            const data = snap.val() || {};
+            Object.values(data).reverse().forEach(item => {
+                feedContainer.innerHTML += `<div class="feed-item">${item.text}</div>`;
+            });
+        });
+    }
+
+    // Les Pushen naar Klas
+    window.pushActiveLesson = () => {
+        const targetClass = document.getElementById('pushClassSelect').value;
+        if (!activeLessonId) return;
+        set(ref(db, `activePushes/${targetClass}`), lessons[activeLessonId]);
+        alert(`Les "${lessons[activeLessonId].title}" is succesvol gepusht naar klas ${targetClass}!`);
+    };
+
+    // Student: Luisteren naar gepushte les
+    function listenToPushedLesson() {
+        document.getElementById('waitingClassName').innerText = currentStudentClass;
+        document.getElementById('studentClassBadge').innerText = `Actieve Klas: ${currentStudentClass}`;
+
+        onValue(ref(db, `activePushes/${currentStudentClass}`), (snap) => {
+            const pushedLesson = snap.val();
+            const container = document.getElementById('studentLessonElements');
+            container.innerHTML = '';
+
+            if (pushedLesson) {
+                document.getElementById('studentLessonHeader').innerText = `📖 Les: ${pushedLesson.title}`;
+                (pushedLesson.elements || []).forEach((elem) => {
+                    container.appendChild(renderElement(elem, 0, false));
+                });
+            } else {
+                container.innerHTML = `<div style="text-align: center; padding: 40px; color: #64748b;">⏳ Geen actieve les gepusht voor klas ${currentStudentClass}.</div>`;
+            }
+        });
+    }
+
+    // Initialisatie
+    initClassDropdowns();
+    switchRole('docent');
+</script>
+
+</body>
+</html>
