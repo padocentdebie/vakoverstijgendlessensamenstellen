@@ -198,6 +198,31 @@
             margin-bottom: 20px;
             align-items: center;
         }
+
+        /* Student Login Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-box h2 { margin-bottom: 20px; }
+        .modal-box select { margin: 15px 0; }
+        .modal-box .btn { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -209,7 +234,7 @@
     <div class="nav">
         <div class="login-controls">
             <button class="btn btn-primary" onclick="switchRole('docent')">👨‍🏫 Docent Modus</button>
-            <button class="btn btn-secondary" onclick="switchRole('student')">👮 Student Modus</button>
+            <button class="btn btn-secondary" onclick="openStudentLogin()">👮 Student Modus</button>
             
             <div id="classSelectContainer" style="display:none; align-items:center; gap:8px; margin-left:15px;">
                 <label><b>Kies Klas:</b></label>
@@ -282,6 +307,17 @@
     </div>
 </div>
 
+<!-- Student Login Modal -->
+<div id="studentLoginModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>👮 Student Inloggen</h2>
+        <p>Selecteer jouw klas om toegang te krijgen tot de les.</p>
+        <select id="modalStudentClassSelect"></select>
+        <br>
+        <button class="btn btn-primary" onclick="confirmStudentLogin()">Start</button>
+    </div>
+</div>
+
 <!-- Firebase SDKs -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -301,7 +337,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Klassenlijst (INDIE bestaat niet)
+    // Klassenlijst (INDIE bestaat NIET)
     const CLASSES = ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL", "JULIETT", "KILO", "LIMA", "MIKE 9"];
 
     // 21 Kwaliteitscheck 3F Punten
@@ -333,6 +369,56 @@
     let currentStudentClass = CLASSES[0];
     let lessons = {};
     let activeLessonId = null;
+
+    // Helper: YouTube embed URL genereren
+    function getYouTubeEmbedUrl(url) {
+        if (!url) return '';
+        // Verwijder eventuele spaties
+        url = url.trim();
+        // Patronen herkennen
+        const patterns = [
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+            /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+        ];
+        for (let pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) {
+                return `https://www.youtube.com/embed/${match[1]}`;
+            }
+        }
+        // Fallback: als het al een embed-link is, geef die terug
+        return url;
+    }
+
+    // Open student login modal
+    window.openStudentLogin = () => {
+        // Vul de klas-select in de modal
+        const modalSelect = document.getElementById('modalStudentClassSelect');
+        modalSelect.innerHTML = '';
+        CLASSES.forEach(c => {
+            modalSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        document.getElementById('studentLoginModal').classList.add('active');
+    };
+
+    // Bevestig login
+    window.confirmStudentLogin = () => {
+        const selectedClass = document.getElementById('modalStudentClassSelect').value;
+        document.getElementById('studentLoginModal').classList.remove('active');
+        currentStudentClass = selectedClass;
+        // Update de dropdown in de navigatie (zodat zichtbaar is welke klas actief is)
+        document.getElementById('studentClassSelect').value = currentStudentClass;
+        switchRole('student');
+    };
+
+    // Sluit modal als er buiten wordt geklikt
+    document.getElementById('studentLoginModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            e.currentTarget.classList.remove('active');
+        }
+    });
 
     window.switchRole = (role) => {
         currentRole = role;
@@ -584,10 +670,10 @@
                 break;
 
             case 'youtube':
-                const embedUrl = elem.content ? elem.content.replace("watch?v=", "embed/") : '';
+                const embedUrl = getYouTubeEmbedUrl(elem.content);
                 body.innerHTML = `
                     ${isDocent ? `<input type="text" value="${elem.content || ''}" placeholder="https://www.youtube.com/watch?v=..." onblur="updateElemContent('${elem.id}', this.value)">` : ''}
-                    ${embedUrl ? `<iframe src="${embedUrl}" style="width:100%; height:450px; border:none; margin-top:10px;" allowfullscreen></iframe>` : ''}
+                    ${embedUrl ? `<iframe src="${embedUrl}" style="width:100%; height:450px; border:none; margin-top:10px;" allowfullscreen></iframe>` : '<p style="color:#888;">Voer een geldige YouTube-link in.</p>'}
                 `;
                 break;
 
