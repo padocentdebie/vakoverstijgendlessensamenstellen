@@ -530,6 +530,15 @@
         return url + '#toolbar=0&navpanes=0';
     }
 
+    // Helper: URLs in tekst omzetten naar klikbare hyperlinks
+    function linkify(text) {
+        if (!text) return '';
+        return text.replace(
+            /(https?:\/\/[^\s<]+[^\s<.,;:!?)"'])/g,
+            '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+    }
+
     // Login tabblad wisselen
     window.switchLoginTab = (role) => {
         document.getElementById('tabDocent').classList.toggle('active', role === 'docent');
@@ -807,7 +816,7 @@
         switch (elem.type) {
             case 'tekst':
                 body.innerHTML = `
-                    ${isDocent ? `<textarea rows="4" placeholder="Voer doelen of activiteiten in..." onblur="updateElemContent('${elem.id}', this.value)">${elem.content || ''}</textarea>` : `<p>${elem.content || ''}</p>`}
+                    ${isDocent ? `<textarea rows="4" placeholder="Voer doelen of activiteiten in..." onblur="updateElemContent('${elem.id}', this.value)">${elem.content || ''}</textarea>` : `<p>${linkify(elem.content)}</p>`}
                 `;
                 break;
 
